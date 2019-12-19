@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-Created on Tue Apr 10 20:45:57 2018
+Created on 12 December 2019
 
-@author: Alvaro
+@author: Eric Chiyembekeza
 """
 
 from flask import Flask, render_template, request, redirect, make_response, send_file
@@ -36,7 +36,7 @@ def loadColumns(dataset):
             df = pd.read_csv(os.path.join(folders[datasets.index(dataset)], dataset + '.csv'), nrows=0)
         return df.columns
 
-#Load Dataset    
+#Load Dataset
 def loadDataset(dataset):
     datasets, extensions, folders = datasetList()
     if dataset in datasets:
@@ -106,10 +106,10 @@ def model_process(dataset = dataset):
     X = df.drop(str(res), axis=1)
     try: X = pd.get_dummies(X)
     except: pass
-    
+
     predictors = X.columns
     if len(predictors)>10: pred = str(len(predictors))
-    else: pred = ', '.join(predictors)    
+    else: pred = ', '.join(predictors)
 
     if score == 'Classification':
         from sklearn.metrics import precision_score, recall_score, f1_score, accuracy_score, roc_curve, auc
@@ -117,7 +117,7 @@ def model_process(dataset = dataset):
         if scaling == 'Yes':
             clf = algorithms.classificationModels()[alg]
             mod = Pipeline([('scaler', StandardScaler()), ('clf', clf)])
-        else: 
+        else:
             mod = algorithms.classificationModels()[alg]
         fig = plotfun.plot_ROC(X.values, y, mod, int(kfold))
 
@@ -125,18 +125,18 @@ def model_process(dataset = dataset):
         from sklearn.metrics import explained_variance_score, r2_score, mean_squared_error
         scoring = ['explained_variance', 'r2', 'mean_squared_error']
         if scaling == 'Yes':
-            pr = algorithms.regressionModels()[alg]  
+            pr = algorithms.regressionModels()[alg]
             mod = Pipeline([('scaler', StandardScaler()), ('clf', pr)])
         else: mod = algorithms.regressionModels()[alg]
         fig = plotfun.plot_predVSreal(X, y, mod, int(kfold))
-    
+
     scores = cross_validate(mod, X, y, cv=int(kfold), scoring=scoring)
     for s in scores:
         scores[s] = str(round(np.mean(scores[s]),3))
     return render_template('scores.html', scores = scores, dataset = dataset, alg=alg,
                            res = res, kfold = kfold, score = score,
                            predictors = pred, response = str(fig, 'utf-8'))
-    
+
 @app.route('/datasets/<dataset>/preprocessing')
 def preprocessing(dataset = dataset):
     columns = loadColumns(dataset)
@@ -150,14 +150,14 @@ def preprocessed_dataset(dataset):
     response = request.form.get('response')
     dropsame = request.form.get('dropsame')
     dropna = request.form.get('dropna')
-    
+
     df = loadDataset(dataset)
 
     if dropna == 'all':
         df = df.dropna(axis=1, how='all')
     elif dropna == 'any':
         df.dropna(axis=1, how='any')
-        
+
     filename = dataset + '_'
     try:
         nf = int(numFeatures)
@@ -173,13 +173,13 @@ def preprocessed_dataset(dataset):
         #Reduced Dataset
         df = pd.DataFrame(kbest.transform(X),columns=best_features)
         df.insert(0, str(response), y)
-        
+
         filename += numFeatures + '_' + 'NA' + dropna + '_Same' + dropsame + '.csv'
-    
+
     except:
         df = df[manualFeatures]
         filename += str(datasetName) + '_' + str(response) + '.csv'
-    
+
     if dropsame == 'Yes':
         nunique = df.apply(pd.Series.nunique)
         cols_to_drop = nunique[nunique == 1].index
@@ -237,9 +237,9 @@ def predict_process(dataset = dataset):
     for col in columns:
         values[col] = request.form.get(col)
         if values[col] != '' and col != res: counter +=1
-    
+
     if counter == 0: return redirect('/datasets/' + dataset + '/predict')
-    
+
     predictors = {}
     for v in values:
         if values[v] != '':
@@ -291,7 +291,7 @@ def predict_process(dataset = dataset):
         classes = model.classes_
         pred_proba = model.predict_proba(Xpred)
         for i in range(len(classes)):
-            predictions['Prob. ' + str(classes[i])] = round(pred_proba[0][i],3)    
+            predictions['Prob. ' + str(classes[i])] = round(pred_proba[0][i],3)
     return render_template('prediction.html', predictions = predictions, response = res,
                            predictors = predictors, algorithm = alg, score = score,
                            dataset = dataset)
